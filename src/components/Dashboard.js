@@ -1,6 +1,6 @@
 // src/components/Dashboard.js
 import React from "react";
-import { CATEGORIES, MONTHS, MEMBERS } from "../data/initialData";
+import { MONTHS, MEMBERS } from "../data/initialData";
 
 function fmt(n) {
   return "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -10,16 +10,17 @@ function getCurrentMonth() {
   return MONTHS[new Date().getMonth()];
 }
 
+const MEMBER_COLORS = { Leonel: "#1F3864", Mpofu: "#0070C0", Leroy: "#7030A0", Mom: "#C00000" };
+
 export default function Dashboard({ store }) {
-  const { contributions, projects, currentMember } = store;
+  const { contributions, projects, currentMember, categories } = store;
   const month = getCurrentMonth();
 
-  // Total contributed this month (all members, all categories)
   let monthTotal = 0;
   let myMonthTotal = 0;
   let totalBudget = 0;
 
-  CATEGORIES.forEach(cat => {
+  categories.forEach(cat => {
     MEMBERS.forEach(m => {
       const v = contributions[month]?.[cat.id]?.[m] || 0;
       monthTotal += v;
@@ -28,26 +29,22 @@ export default function Dashboard({ store }) {
     totalBudget += cat.budget;
   });
 
-  const budgetPct = Math.min(100, Math.round((monthTotal / totalBudget) * 100));
+  const budgetPct = totalBudget > 0 ? Math.min(100, Math.round((monthTotal / totalBudget) * 100)) : 0;
 
-  // Annual totals
   let annualTotal = 0;
   MONTHS.forEach(mo => {
-    CATEGORIES.forEach(cat => {
+    categories.forEach(cat => {
       MEMBERS.forEach(m => {
         annualTotal += contributions[mo]?.[cat.id]?.[m] || 0;
       });
     });
   });
 
-  // Project totals
-  const waterPaid = Object.values(projects.find(p => p.id === "water_bill")?.contributions || {}).reduce((a, b) => a + b, 0);
-  const waterTarget = projects.find(p => p.id === "water_bill")?.target || 1000;
+  const waterProject = projects.find(p => p.id === "water_bill");
+  const waterPaid = Object.values(waterProject?.contributions || {}).reduce((a, b) => a + b, 0);
+  const waterTarget = waterProject?.target || 1000;
 
-  const MEMBER_COLORS = { Leonel: "#1F3864", Mpofu: "#0070C0", Leroy: "#7030A0", Mom: "#C00000" };
-
-  // Top categories this month
-  const catTotals = CATEGORIES.map(cat => {
+  const catTotals = categories.map(cat => {
     const total = MEMBERS.reduce((s, m) => s + (contributions[month]?.[cat.id]?.[m] || 0), 0);
     return { ...cat, total };
   }).sort((a, b) => b.total - a.total).slice(0, 5);
@@ -94,7 +91,7 @@ export default function Dashboard({ store }) {
       <div className="card">
         <div className="card-title">Family this month</div>
         {MEMBERS.map(m => {
-          const total = CATEGORIES.reduce((s, cat) => s + (contributions[month]?.[cat.id]?.[m] || 0), 0);
+          const total = categories.reduce((s, cat) => s + (contributions[month]?.[cat.id]?.[m] || 0), 0);
           const pct = monthTotal > 0 ? (total / monthTotal) * 100 : 0;
           return (
             <div key={m} style={{ marginBottom: 10 }}>

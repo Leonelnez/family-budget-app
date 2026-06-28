@@ -1,16 +1,16 @@
 // src/components/MonthlyLog.js
 import React, { useState } from "react";
-import { CATEGORIES, MONTHS, MEMBERS } from "../data/initialData";
+import { MONTHS, MEMBERS } from "../data/initialData";
 
 function fmt(n) {
   return "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export default function MonthlyLog({ store }) {
-  const { contributions, currentMember, logContribution } = store;
+  const { contributions, currentMember, logContribution, categories } = store;
   const currentMonthIdx = new Date().getMonth();
   const [selectedMonth, setSelectedMonth] = useState(MONTHS[currentMonthIdx]);
-  const [selectedCat, setSelectedCat] = useState(CATEGORIES[0].id);
+  const [selectedCat, setSelectedCat] = useState(categories[0]?.id || "");
   const [amount, setAmount] = useState("");
   const [toast, setToast] = useState(null);
 
@@ -19,11 +19,10 @@ export default function MonthlyLog({ store }) {
     if (!val || val < 0) return;
     logContribution(selectedMonth, selectedCat, currentMember, val);
     setAmount("");
-    setToast(`✅ Logged ${fmt(val)} for ${CATEGORIES.find(c=>c.id===selectedCat)?.label}`);
+    setToast(`✅ Logged ${fmt(val)} for ${categories.find(c => c.id === selectedCat)?.label}`);
     setTimeout(() => setToast(null), 2500);
   }
 
-  // Totals for selected month
   const monthData = contributions[selectedMonth] || {};
 
   return (
@@ -51,7 +50,7 @@ export default function MonthlyLog({ store }) {
           <div className="form-group">
             <label className="form-label">CATEGORY</label>
             <select className="form-select" value={selectedCat} onChange={e => setSelectedCat(e.target.value)}>
-              {CATEGORIES.map(cat => (
+              {categories.map(cat => (
                 <option key={cat.id} value={cat.id}>{cat.icon} {cat.label}</option>
               ))}
             </select>
@@ -60,10 +59,7 @@ export default function MonthlyLog({ store }) {
             <label className="form-label">AMOUNT (USD)</label>
             <input
               className="form-input"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="0.00"
+              type="number" min="0" step="0.01" placeholder="0.00"
               value={amount}
               onChange={e => setAmount(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleLog()}
@@ -75,10 +71,10 @@ export default function MonthlyLog({ store }) {
         </div>
       </div>
 
-      {/* Month breakdown table */}
+      {/* Month breakdown */}
       <div className="card">
         <div className="card-title">{selectedMonth} — all categories</div>
-        {CATEGORIES.map(cat => {
+        {categories.map(cat => {
           const row = monthData[cat.id] || {};
           const total = MEMBERS.reduce((s, m) => s + (row[m] || 0), 0);
           const myAmt = row[currentMember] || 0;
@@ -107,15 +103,15 @@ export default function MonthlyLog({ store }) {
           );
         })}
 
-        {/* Month totals row */}
+        {/* Month totals */}
         <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 12, marginTop: 4, borderTop: "2px solid var(--border)" }}>
           <span style={{ fontWeight: 700, fontSize: 14 }}>TOTAL</span>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: "var(--navy)" }}>
-              {fmt(CATEGORIES.reduce((s, cat) => s + MEMBERS.reduce((ss, m) => ss + (monthData[cat.id]?.[m] || 0), 0), 0))}
+              {fmt(categories.reduce((s, cat) => s + MEMBERS.reduce((ss, m) => ss + (monthData[cat.id]?.[m] || 0), 0), 0))}
             </div>
             <div style={{ fontSize: 11, color: "var(--text-3)" }}>
-              Your share: {fmt(CATEGORIES.reduce((s, cat) => s + (monthData[cat.id]?.[currentMember] || 0), 0))}
+              Your share: {fmt(categories.reduce((s, cat) => s + (monthData[cat.id]?.[currentMember] || 0), 0))}
             </div>
           </div>
         </div>
