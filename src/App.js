@@ -31,7 +31,7 @@ export default function App() {
           <span className="app-logo">🏠</span>
           <div>
             <div className="app-title">Family Budget</div>
-            <div className="app-sub">Cairns · Bulawayo</div>
+            <div className="app-sub">Nezira Family</div>
           </div>
         </div>
         <button
