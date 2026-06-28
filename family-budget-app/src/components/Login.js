@@ -13,7 +13,7 @@ export default function Login({ members, onSelect }) {
     <div className="login-screen">
       <div className="login-logo">🏠</div>
       <div className="login-title">Family Budget</div>
-      <div className="login-sub">Nezira FamilY</div>
+      <div className="login-sub">Nezira Family App</div>
       <div className="login-label">WHO ARE YOU?</div>
       <div className="login-grid">
         {members.map(m => (
