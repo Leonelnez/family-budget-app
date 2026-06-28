@@ -314,3 +314,65 @@ body {
 .empty-state { text-align: center; padding: 32px 16px; color: var(--text-3); }
 .empty-state-icon { font-size: 36px; margin-bottom: 8px; }
 .empty-state-text { font-size: 14px; }
+
+/* ── Admin & PIN styles ──────────────────────────── */
+.admin-entry-btn {
+  margin-top: 32px;
+  background: none; border: none;
+  color: rgba(255,255,255,0.3);
+  font-size: 12px; cursor: pointer;
+  padding: 8px 16px; border-radius: 99px;
+  transition: color 0.2s;
+}
+.admin-entry-btn:hover { color: rgba(255,255,255,0.6); }
+
+.pin-dots {
+  display: flex; gap: 16px; margin: 28px 0 8px;
+}
+.pin-dot {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.4);
+  background: transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+.pin-dot.filled {
+  background: #fff;
+  border-color: #fff;
+}
+.pin-error {
+  color: #FF6B6B; font-size: 13px; font-weight: 600;
+  margin-bottom: 8px; height: 20px;
+}
+
+.numpad {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 12px; width: 240px; margin: 16px 0 24px;
+}
+.numpad-btn {
+  height: 64px; border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  border: 1.5px solid rgba(255,255,255,0.2);
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 22px; font-weight: 600;
+  cursor: pointer; transition: background 0.12s, transform 0.08s;
+}
+.numpad-btn:hover { background: rgba(255,255,255,0.2); }
+.numpad-btn:active { transform: scale(0.92); background: rgba(255,255,255,0.3); }
+.numpad-clear { font-size: 16px; }
+.numpad-del   { font-size: 18px; }
+
+.pin-back-btn {
+  background: none; border: none;
+  color: rgba(255,255,255,0.5); font-size: 13px;
+  cursor: pointer; padding: 8px;
+  transition: color 0.2s;
+}
+.pin-back-btn:hover { color: rgba(255,255,255,0.8); }
+
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20%,60%  { transform: translateX(-8px); }
+  40%,80%  { transform: translateX(8px); }
+}
+.shake { animation: shake 0.4s ease; }

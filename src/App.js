@@ -7,6 +7,7 @@ import Dashboard from "./components/Dashboard";
 import MonthlyLog from "./components/MonthlyLog";
 import Projects from "./components/Projects";
 import ContribSummary from "./components/ContribSummary";
+import AdminPanel from "./components/AdminPanel";
 import "./App.css";
 
 export default function App() {
@@ -14,33 +15,48 @@ export default function App() {
   const [view, setView] = useState("dashboard");
 
   if (!store.currentMember) {
-    return <Login members={MEMBERS} onSelect={store.setCurrentMember} />;
+    return (
+      <Login
+        members={MEMBERS}
+        onSelect={store.setCurrentMember}
+        onAdminLogin={() => store.setAdmin(true)}
+      />
+    );
   }
 
-  const nav = [
-    { id: "dashboard", label: "Dashboard", icon: "📊" },
-    { id: "monthly",   label: "Log Expenses", icon: "✏️" },
-    { id: "projects",  label: "Projects", icon: "🎯" },
-    { id: "summary",   label: "Summary", icon: "👥" },
-  ];
+  const nav = store.isAdmin
+    ? [
+        { id: "dashboard", label: "Dashboard", icon: "📊" },
+        { id: "admin",     label: "Admin",     icon: "🔐" },
+        { id: "projects",  label: "Projects",  icon: "🎯" },
+        { id: "summary",   label: "Summary",   icon: "👥" },
+      ]
+    : [
+        { id: "dashboard", label: "Dashboard", icon: "📊" },
+        { id: "monthly",   label: "Log Expenses", icon: "✏️" },
+        { id: "projects",  label: "Projects",  icon: "🎯" },
+        { id: "summary",   label: "Summary",   icon: "👥" },
+      ];
 
   return (
     <div className="app">
-      <header className="app-header">
+      <header className="app-header" style={store.isAdmin ? { background: "linear-gradient(90deg,#1F3864,#7030A0)" } : {}}>
         <div className="header-left">
           <span className="app-logo">🏠</span>
           <div>
             <div className="app-title">Family Budget</div>
-            <div className="app-sub">Nezira Family</div>
+            <div className="app-sub">{store.isAdmin ? "🔐 Admin Mode" : "Nezira Family · Bulawayo"}</div>
           </div>
         </div>
         <button
           className="member-badge"
-          onClick={() => store.setCurrentMember(null)}
+          onClick={() => { store.setCurrentMember(null); store.setAdmin && store.setAdmin(false); }}
           title="Switch member"
         >
-          {memberInitial(store.currentMember)}
-          <span className="member-name">{store.currentMember}</span>
+          <div className="initial" style={{ background: store.isAdmin ? "#7030A0" : undefined }}>
+            {store.currentMember?.[0]?.toUpperCase()}
+          </div>
+          <span className="member-name">{store.isAdmin ? "Admin" : store.currentMember}</span>
         </button>
       </header>
 
@@ -49,6 +65,7 @@ export default function App() {
         {view === "monthly"   && <MonthlyLog store={store} />}
         {view === "projects"  && <Projects store={store} />}
         {view === "summary"   && <ContribSummary store={store} />}
+        {view === "admin"     && <AdminPanel store={store} />}
       </main>
 
       <nav className="bottom-nav">
@@ -57,6 +74,7 @@ export default function App() {
             key={n.id}
             className={`nav-btn ${view === n.id ? "active" : ""}`}
             onClick={() => setView(n.id)}
+            style={n.id === "admin" && view === n.id ? { color: "#7030A0" } : {}}
           >
             <span className="nav-icon">{n.icon}</span>
             <span className="nav-label">{n.label}</span>
@@ -65,8 +83,4 @@ export default function App() {
       </nav>
     </div>
   );
-}
-
-function memberInitial(name) {
-  return name ? name[0].toUpperCase() : "?";
 }
