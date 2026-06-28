@@ -31,7 +31,7 @@ export default function App() {
           <span className="app-logo">🏠</span>
           <div>
             <div className="app-title">Family Budget</div>
-            <div className="app-sub">Nezira Family</div>
+            <div className="app-sub">Nezira Family App</div>
           </div>
         </div>
         <button
