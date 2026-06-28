@@ -14,6 +14,24 @@ export default function App() {
   const store = useStore();
   const [view, setView] = useState("dashboard");
 
+  // Loading screen while Firebase connects
+  if (store.loading) {
+    return (
+      <div style={{
+        minHeight: "100dvh", background: "#1F3864",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center", gap: 16
+      }}>
+        <div style={{ fontSize: 48 }}>🏠</div>
+        <div style={{ color: "#fff", fontFamily: "'Space Grotesk',sans-serif", fontSize: 20, fontWeight: 700 }}>
+          Family Budget
+        </div>
+        <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 13 }}>Connecting...</div>
+        <div className="spinner" />
+      </div>
+    );
+  }
+
   if (!store.currentMember) {
     return (
       <Login
@@ -50,7 +68,7 @@ export default function App() {
         </div>
         <button
           className="member-badge"
-          onClick={() => { store.setCurrentMember(null); store.setAdmin && store.setAdmin(false); }}
+          onClick={() => store.setAdmin(false)}
           title="Switch member"
         >
           <div className="initial" style={{ background: store.isAdmin ? "#7030A0" : undefined }}>

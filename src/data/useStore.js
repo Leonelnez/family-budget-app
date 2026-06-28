@@ -1,168 +1,143 @@
 // src/data/useStore.js
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { ref, onValue, set, update } from "firebase/database";
+import { db } from "../firebase";
 import { buildEmptyContributions, PROJECTS, CATEGORIES } from "./initialData";
 
-const STORAGE_KEY = "family_budget_v1";
 export const ADMIN_PIN = "1794";
+const DB_ROOT = "family_budget";
 
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return null;
-}
-
-function saveState(state) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {}
+function buildDefaultState() {
+  return {
+    contributions: buildEmptyContributions(),
+    projects: PROJECTS,
+    categories: CATEGORIES,
+  };
 }
 
 export function useStore() {
-  const [state, setState] = useState(() => {
-    const saved = loadState();
-    if (saved) return saved;
-    return {
-      contributions: buildEmptyContributions(),
-      projects: PROJECTS,
-      categories: CATEGORIES,
-      currentMember: null,
-      isAdmin: false,
-    };
-  });
+  const [dbState, setDbState] = useState(null); // data from Firebase
+  const [loading, setLoading] = useState(true);
+  const [currentMember, setCurrentMemberLocal] = useState(null);
+  const [isAdmin, setIsAdminLocal] = useState(false);
+  const initialized = useRef(false);
 
-  useEffect(() => { saveState(state); }, [state]);
+  // ── Listen to Firebase in real time ──────────────
+  useEffect(() => {
+    const rootRef = ref(db, DB_ROOT);
+    const unsub = onValue(rootRef, (snapshot) => {
+      const val = snapshot.val();
+      if (val) {
+        // Merge with defaults to ensure all keys exist
+        setDbState({
+          contributions: val.contributions || buildEmptyContributions(),
+          projects: val.projects
+            ? Object.values(val.projects)
+            : PROJECTS,
+          categories: val.categories
+            ? Object.values(val.categories)
+            : CATEGORIES,
+        });
+      } else if (!initialized.current) {
+        // First time — seed the database
+        const defaults = buildDefaultState();
+        const toWrite = {
+          contributions: defaults.contributions,
+          projects: Object.fromEntries(defaults.projects.map(p => [p.id, p])),
+          categories: Object.fromEntries(defaults.categories.map(c => [c.id, c])),
+        };
+        set(rootRef, toWrite);
+        initialized.current = true;
+      }
+      setLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
+  // ── Helpers ───────────────────────────────────────
+  const state = dbState || buildDefaultState();
 
   function logContribution(month, categoryId, member, amount) {
-    setState(prev => ({
-      ...prev,
-      contributions: {
-        ...prev.contributions,
-        [month]: {
-          ...prev.contributions[month],
-          [categoryId]: {
-            ...prev.contributions[month][categoryId],
-            [member]: Number(amount),
-          },
-        },
-      },
-    }));
+    const path = `${DB_ROOT}/contributions/${month}/${categoryId}/${member}`;
+    set(ref(db, path), Number(amount));
   }
 
   function logProjectContribution(projectId, member, amount) {
-    setState(prev => ({
-      ...prev,
-      projects: prev.projects.map(p =>
-        p.id === projectId
-          ? { ...p, contributions: { ...p.contributions, [member]: Number(amount) } }
-          : p
-      ),
-    }));
+    const path = `${DB_ROOT}/projects/${projectId}/contributions/${member}`;
+    set(ref(db, path), Number(amount));
   }
 
   function updateProjectTarget(projectId, target) {
-    setState(prev => ({
-      ...prev,
-      projects: prev.projects.map(p =>
-        p.id === projectId
-          ? { ...p, target: Number(target), equalShare: Number(target) / 4 }
-          : p
-      ),
-    }));
+    const updates = {};
+    updates[`${DB_ROOT}/projects/${projectId}/target`] = Number(target);
+    updates[`${DB_ROOT}/projects/${projectId}/equalShare`] = Number(target) / 4;
+    update(ref(db), updates);
   }
 
-  // ADMIN: update project status
   function updateProjectStatus(projectId, status) {
-    setState(prev => ({
-      ...prev,
-      projects: prev.projects.map(p =>
-        p.id === projectId ? { ...p, status } : p
-      ),
-    }));
+    set(ref(db, `${DB_ROOT}/projects/${projectId}/status`), status);
   }
 
-  // ADMIN: update project name
   function updateProjectName(projectId, name) {
-    setState(prev => ({
-      ...prev,
-      projects: prev.projects.map(p =>
-        p.id === projectId ? { ...p, name } : p
-      ),
-    }));
+    set(ref(db, `${DB_ROOT}/projects/${projectId}/name`), name);
   }
 
-  // ADMIN: update project description
   function updateProjectDescription(projectId, description) {
-    setState(prev => ({
-      ...prev,
-      projects: prev.projects.map(p =>
-        p.id === projectId ? { ...p, description } : p
-      ),
-    }));
+    set(ref(db, `${DB_ROOT}/projects/${projectId}/description`), description);
   }
 
-  // ADMIN: add a new project
   function addProject(project) {
-    setState(prev => ({
-      ...prev,
-      projects: [...prev.projects, {
-        id: "proj_" + Date.now(),
-        name: project.name,
-        icon: project.icon || "📋",
-        color: project.color || "#1F3864",
-        colorLight: "#DEEAF1",
-        target: Number(project.target) || 0,
-        status: "planning",
-        description: project.description || "",
-        contributions: { Leonel: 0, Mpofu: 0, Leroy: 0, Mom: 0 },
-        equalShare: Number(project.target) / 4 || 0,
-      }],
-    }));
-  }
-
-  // ADMIN: delete a project
-  function deleteProject(projectId) {
-    setState(prev => ({
-      ...prev,
-      projects: prev.projects.filter(p => p.id !== projectId),
-    }));
-  }
-
-  // ADMIN: update category budget
-  function updateCategoryBudget(categoryId, budget) {
-    setState(prev => ({
-      ...prev,
-      categories: (prev.categories || CATEGORIES).map(c =>
-        c.id === categoryId ? { ...c, budget: Number(budget) } : c
-      ),
-    }));
-  }
-
-  // ADMIN: reset all data
-  function resetData() {
-    const fresh = {
-      contributions: buildEmptyContributions(),
-      projects: PROJECTS,
-      categories: CATEGORIES,
-      currentMember: null,
-      isAdmin: false,
+    const id = "proj_" + Date.now();
+    const newProject = {
+      id,
+      name: project.name,
+      icon: project.icon || "📋",
+      color: project.color || "#1F3864",
+      colorLight: "#DEEAF1",
+      target: Number(project.target) || 0,
+      status: "planning",
+      description: project.description || "",
+      contributions: { Leonel: 0, Mpofu: 0, Leroy: 0, Mom: 0 },
+      equalShare: Number(project.target) / 4 || 0,
     };
-    setState(fresh);
-    saveState(fresh);
+    set(ref(db, `${DB_ROOT}/projects/${id}`), newProject);
+  }
+
+  function deleteProject(projectId) {
+    set(ref(db, `${DB_ROOT}/projects/${projectId}`), null);
+  }
+
+  function updateCategoryBudget(categoryId, budget) {
+    set(ref(db, `${DB_ROOT}/categories/${categoryId}/budget`), Number(budget));
+  }
+
+  function resetData() {
+    const defaults = buildDefaultState();
+    const toWrite = {
+      contributions: defaults.contributions,
+      projects: Object.fromEntries(defaults.projects.map(p => [p.id, p])),
+      categories: Object.fromEntries(defaults.categories.map(c => [c.id, c])),
+    };
+    set(ref(db, DB_ROOT), toWrite);
+    setCurrentMemberLocal(null);
+    setIsAdminLocal(false);
   }
 
   function setCurrentMember(member) {
-    setState(prev => ({ ...prev, currentMember: member, isAdmin: false }));
+    setCurrentMemberLocal(member);
+    setIsAdminLocal(false);
   }
 
   function setAdmin(val) {
-    setState(prev => ({ ...prev, isAdmin: val, currentMember: val ? "Leonel" : null }));
+    setIsAdminLocal(val);
+    setCurrentMemberLocal(val ? "Leonel" : null);
   }
 
   return {
     ...state,
-    categories: state.categories || CATEGORIES,
+    loading,
+    currentMember,
+    isAdmin,
     logContribution,
     logProjectContribution,
     updateProjectTarget,
