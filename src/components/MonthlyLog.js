@@ -116,7 +116,7 @@ export default function MonthlyLog({ store }) {
               <div className="form-group">
                 <label className="form-label">LOGGING FOR</label>
                 <select className="form-select" value={currentMember}
-                  onChange={e => store.setCurrentMember(e.target.value)}>
+                  onChange={e => store.setCurrentMember(e.target.value, true)}>
                   {MEMBERS.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
               </div>

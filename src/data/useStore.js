@@ -123,9 +123,9 @@ export function useStore() {
     setIsAdminLocal(false);
   }
 
-  function setCurrentMember(member) {
+  function setCurrentMember(member, keepAdmin = false) {
     setCurrentMemberLocal(member);
-    setIsAdminLocal(false);
+    if (!keepAdmin) setIsAdminLocal(false);
   }
 
   function setAdmin(val) {
