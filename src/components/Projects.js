@@ -15,18 +15,38 @@ function payStatus(paid, share) {
 }
 
 export default function Projects({ store }) {
-  const { projects, currentMember, logProjectContribution, updateProjectTarget } = store;
+  const { projects, currentMember, logProjectContribution, updateProjectTarget, isAdmin } = store;
   const [amounts, setAmounts] = useState({});
   const [targetEdits, setTargetEdits] = useState({});
   const [toast, setToast] = useState(null);
+  const [editingEntry, setEditingEntry] = useState(null); // { projectId, member }
+  const [editValue, setEditValue] = useState("");
 
+  function showToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  }
+
+  // ADD to existing — accumulates payments
   function handleContrib(projectId) {
     const val = parseFloat(amounts[projectId] || 0);
     if (!val || val < 0) return;
-    logProjectContribution(projectId, currentMember, val);
+    const project = projects.find(p => p.id === projectId);
+    const existing = project?.contributions?.[currentMember] || 0;
+    const newTotal = existing + val;
+    logProjectContribution(projectId, currentMember, newTotal);
     setAmounts(a => ({ ...a, [projectId]: "" }));
-    setToast(`✅ Logged ${fmt(val)} for project`);
-    setTimeout(() => setToast(null), 2500);
+    showToast(`✅ Added ${fmt(val)} — your total is now ${fmt(newTotal)}`);
+  }
+
+  // Admin sets exact amount for any member
+  function handleAdminSaveEdit(projectId) {
+    const val = parseFloat(editValue);
+    if (isNaN(val) || val < 0) return;
+    logProjectContribution(projectId, editingEntry.member, val);
+    setEditingEntry(null);
+    setEditValue("");
+    showToast(`✅ ${editingEntry.member}'s payment set to ${fmt(val)}`);
   }
 
   function handleTargetSave(projectId) {
@@ -34,20 +54,21 @@ export default function Projects({ store }) {
     if (!val || val < 0) return;
     updateProjectTarget(projectId, val);
     setTargetEdits(t => ({ ...t, [projectId]: "" }));
+    showToast("✅ Target updated");
   }
 
   return (
     <div>
       <div className="section-title">Projects 🎯</div>
-      <div className="section-sub">2 pending family projects</div>
+      <div className="section-sub">{projects.length} family projects</div>
 
       {projects.map(project => {
-        const totalPaid = Object.values(project.contributions).reduce((a, b) => a + b, 0);
-        const target = project.target || 1;
+        const totalPaid = Object.values(project.contributions || {}).reduce((a, b) => a + b, 0);
         const pct = project.target > 0 ? Math.min(100, (totalPaid / project.target) * 100) : 0;
 
         return (
           <div key={project.id} className="project-card">
+            {/* Header */}
             <div className="project-header" style={{ background: project.color }}>
               <span className="project-icon">{project.icon}</span>
               <div>
@@ -58,9 +79,7 @@ export default function Projects({ store }) {
                   </div>
                 )}
               </div>
-              <div className="project-status">
-                {project.status.toUpperCase()}
-              </div>
+              <div className="project-status">{project.status.toUpperCase()}</div>
             </div>
 
             <div className="project-body">
@@ -80,27 +99,111 @@ export default function Projects({ store }) {
               )}
 
               {/* Member rows */}
-              <div className="project-members">
+              <div className="project-members" style={{ marginBottom: 14 }}>
                 {MEMBERS.map(m => {
-                  const paid = project.contributions[m] || 0;
+                  const paid = project.contributions?.[m] || 0;
                   const share = project.equalShare || 0;
                   const memPct = share > 0 ? Math.min(100, (paid / share) * 100) : 0;
                   const status = payStatus(paid, share);
+                  const isEditing = editingEntry?.projectId === project.id && editingEntry?.member === m;
+
                   return (
-                    <div key={m} className="proj-member-row">
-                      <div className="proj-member-name" style={{ color: m === currentMember ? MEMBER_COLORS[m] : "var(--text)" }}>
-                        {m}{m === currentMember ? " 👤" : ""}
+                    <div key={m} style={{
+                      padding: "8px 0",
+                      borderBottom: "1px solid var(--border)",
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                        {/* Avatar */}
+                        <div style={{
+                          width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+                          background: MEMBER_COLORS[m], color: "#fff",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 12, fontWeight: 700
+                        }}>{m[0]}</div>
+
+                        {/* Name */}
+                        <span style={{
+                          fontSize: 13, fontWeight: 600, flex: 1,
+                          color: m === currentMember ? MEMBER_COLORS[m] : "var(--text)"
+                        }}>
+                          {m}{m === currentMember ? " (you)" : ""}
+                        </span>
+
+                        {/* Amount + status */}
+                        {isEditing ? (
+                          <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                            <input
+                              type="number" min="0" step="0.01"
+                              value={editValue}
+                              onChange={e => setEditValue(e.target.value)}
+                              onKeyDown={e => e.key === "Enter" && handleAdminSaveEdit(project.id)}
+                              autoFocus
+                              style={{
+                                width: 90, padding: "5px 8px", borderRadius: 6,
+                                border: "1.5px solid var(--navy-mid)", fontSize: 13,
+                                fontFamily: "inherit", textAlign: "center"
+                              }}
+                            />
+                            <button onClick={() => handleAdminSaveEdit(project.id)} style={{
+                              padding: "5px 10px", borderRadius: 6, border: "none",
+                              background: "var(--green)", color: "#fff",
+                              fontSize: 12, fontWeight: 700, cursor: "pointer"
+                            }}>✓</button>
+                            <button onClick={() => setEditingEntry(null)} style={{
+                              padding: "5px 8px", borderRadius: 6,
+                              border: "1px solid var(--border)", background: "#fff",
+                              fontSize: 12, cursor: "pointer"
+                            }}>✕</button>
+                          </div>
+                        ) : (
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{
+                              fontFamily: "'Space Grotesk',sans-serif",
+                              fontWeight: 700, fontSize: 14,
+                              color: paid > 0 ? "var(--text)" : "var(--text-3)"
+                            }}>
+                              {fmt(paid)}
+                            </span>
+                            <span className={`status-pill ${status.cls}`}>{status.label}</span>
+                            {/* Admin edit button */}
+                            {isAdmin && (
+                              <button
+                                onClick={() => {
+                                  setEditingEntry({ projectId: project.id, member: m });
+                                  setEditValue(String(paid));
+                                }}
+                                style={{
+                                  width: 28, height: 28, borderRadius: 6,
+                                  border: "1px solid var(--border)", background: "#fff",
+                                  cursor: "pointer", fontSize: 13,
+                                  display: "flex", alignItems: "center", justifyContent: "center"
+                                }}
+                              >✏️</button>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <div className="proj-member-bar-bg">
-                        <div className="proj-member-bar-fill" style={{ width: memPct + "%", background: MEMBER_COLORS[m] || project.color }} />
-                      </div>
-                      <div className="proj-member-amount">{fmt(paid)}</div>
-                      <span className={`status-pill ${status.cls}`}>{status.label}</span>
+
+                      {/* Progress bar per member */}
+                      {share > 0 && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 36 }}>
+                          <div style={{ flex: 1, height: 5, background: "var(--border)", borderRadius: 99, overflow: "hidden" }}>
+                            <div style={{
+                              height: "100%", width: memPct + "%",
+                              background: MEMBER_COLORS[m], borderRadius: 99, transition: "width 0.4s"
+                            }} />
+                          </div>
+                          <span style={{ fontSize: 10, color: "var(--text-3)", whiteSpace: "nowrap" }}>
+                            {fmt(paid)} / {fmt(share)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
 
+              {/* Totals */}
               <div className="proj-totals">
                 <div className="proj-total-item">
                   <div className="proj-total-label">RAISED</div>
@@ -118,15 +221,23 @@ export default function Projects({ store }) {
                 </div>
               </div>
 
-              {/* Log contribution */}
+              {/* Log MY payment — adds to existing */}
               <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14, marginTop: 14 }}>
-                <div className="form-label" style={{ marginBottom: 8 }}>LOG MY PAYMENT</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div className="form-label">ADD PAYMENT</div>
+                  <div style={{ fontSize: 11, color: "var(--text-3)" }}>
+                    Your total: <strong style={{ color: MEMBER_COLORS[currentMember] }}>
+                      {fmt(project.contributions?.[currentMember] || 0)}
+                    </strong>
+                  </div>
+                </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <input
                     className="form-input"
-                    type="number" min="0" step="0.01" placeholder="Amount..."
+                    type="number" min="0" step="0.01" placeholder="Amount to add..."
                     value={amounts[project.id] || ""}
                     onChange={e => setAmounts(a => ({ ...a, [project.id]: e.target.value }))}
+                    onKeyDown={e => e.key === "Enter" && handleContrib(project.id)}
                     style={{ flex: 1 }}
                   />
                   <button
@@ -134,27 +245,25 @@ export default function Projects({ store }) {
                     style={{ width: "auto", padding: "0 20px" }}
                     onClick={() => handleContrib(project.id)}
                   >
-                    Save
+                    + Add
                   </button>
                 </div>
               </div>
 
-              {/* Set target (solar only) */}
-              {project.id === "solar" && (
+              {/* Set target (non-water-bill projects) */}
+              {project.id !== "water_bill" && (
                 <div style={{ marginTop: 12 }}>
-                  <div className="form-label" style={{ marginBottom: 8 }}>SET PROJECT TARGET ($)</div>
+                  <div className="form-label" style={{ marginBottom: 8 }}>SET TARGET ($)</div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <input
                       className="form-input"
-                      type="number" min="0" step="100" placeholder="Enter total cost estimate..."
+                      type="number" min="0" step="100"
+                      placeholder={project.target > 0 ? `Current: ${fmt(project.target)}` : "Enter target..."}
                       value={targetEdits[project.id] || ""}
                       onChange={e => setTargetEdits(t => ({ ...t, [project.id]: e.target.value }))}
                       style={{ flex: 1 }}
                     />
-                    <button
-                      className="btn-secondary"
-                      onClick={() => handleTargetSave(project.id)}
-                    >
+                    <button className="btn-secondary" onClick={() => handleTargetSave(project.id)}>
                       Set
                     </button>
                   </div>
