@@ -42,16 +42,18 @@ export default function App() {
 
   const nav = store.isAdmin
     ? [
-        { id: "dashboard", label: "Dashboard", icon: "📊" },
-        { id: "admin",     label: "Admin",     icon: "🔐" },
-        { id: "projects",  label: "Projects",  icon: "🎯" },
-        { id: "report",    label: "Report",    icon: "📋" },
+        { id: "dashboard", label: "Home",     icon: "📊" },
+        { id: "admin",     label: "Admin",    icon: "🔐" },
+        { id: "projects",  label: "Projects", icon: "🎯" },
+        { id: "summary",   label: "Summary",  icon: "👥" },
+        { id: "report",    label: "Report",   icon: "📋" },
       ]
     : [
-        { id: "dashboard", label: "Dashboard", icon: "📊" },
-        { id: "monthly",   label: "Expenses",  icon: "✏️" },
-        { id: "projects",  label: "Projects",  icon: "🎯" },
-        { id: "report",    label: "Report",    icon: "📋" },
+        { id: "dashboard", label: "Home",     icon: "📊" },
+        { id: "monthly",   label: "Expenses", icon: "✏️" },
+        { id: "projects",  label: "Projects", icon: "🎯" },
+        { id: "summary",   label: "Summary",  icon: "👥" },
+        { id: "report",    label: "Report",   icon: "📋" },
       ];
 
   return (
