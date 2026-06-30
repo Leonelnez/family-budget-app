@@ -8,13 +8,13 @@ import MonthlyLog from "./components/MonthlyLog";
 import Projects from "./components/Projects";
 import ContribSummary from "./components/ContribSummary";
 import AdminPanel from "./components/AdminPanel";
+import PaymentReport from "./components/PaymentReport";
 import "./App.css";
 
 export default function App() {
   const store = useStore();
   const [view, setView] = useState("dashboard");
 
-  // Loading screen while Firebase connects
   if (store.loading) {
     return (
       <div style={{
@@ -23,9 +23,7 @@ export default function App() {
         alignItems: "center", justifyContent: "center", gap: 16
       }}>
         <div style={{ fontSize: 48 }}>🏠</div>
-        <div style={{ color: "#fff", fontFamily: "'Space Grotesk',sans-serif", fontSize: 20, fontWeight: 700 }}>
-          Family Budget
-        </div>
+        <div style={{ color: "#fff", fontFamily: "'Space Grotesk',sans-serif", fontSize: 20, fontWeight: 700 }}>Family Budget</div>
         <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 13 }}>Connecting...</div>
         <div className="spinner" />
       </div>
@@ -47,13 +45,13 @@ export default function App() {
         { id: "dashboard", label: "Dashboard", icon: "📊" },
         { id: "admin",     label: "Admin",     icon: "🔐" },
         { id: "projects",  label: "Projects",  icon: "🎯" },
-        { id: "summary",   label: "Summary",   icon: "👥" },
+        { id: "report",    label: "Report",    icon: "📋" },
       ]
     : [
         { id: "dashboard", label: "Dashboard", icon: "📊" },
-        { id: "monthly",   label: "Log Expenses", icon: "✏️" },
+        { id: "monthly",   label: "Expenses",  icon: "✏️" },
         { id: "projects",  label: "Projects",  icon: "🎯" },
-        { id: "summary",   label: "Summary",   icon: "👥" },
+        { id: "report",    label: "Report",    icon: "📋" },
       ];
 
   return (
@@ -66,11 +64,7 @@ export default function App() {
             <div className="app-sub">{store.isAdmin ? "🔐 Admin Mode" : "Nezira Family · Bulawayo"}</div>
           </div>
         </div>
-        <button
-          className="member-badge"
-          onClick={() => store.setAdmin(false)}
-          title="Switch member"
-        >
+        <button className="member-badge" onClick={() => store.setAdmin(false)} title="Switch member">
           <div className="initial" style={{ background: store.isAdmin ? "#7030A0" : undefined }}>
             {store.currentMember?.[0]?.toUpperCase()}
           </div>
@@ -84,12 +78,12 @@ export default function App() {
         {view === "projects"  && <Projects store={store} />}
         {view === "summary"   && <ContribSummary store={store} />}
         {view === "admin"     && <AdminPanel store={store} />}
+        {view === "report"    && <PaymentReport store={store} />}
       </main>
 
       <nav className="bottom-nav">
         {nav.map(n => (
-          <button
-            key={n.id}
+          <button key={n.id}
             className={`nav-btn ${view === n.id ? "active" : ""}`}
             onClick={() => setView(n.id)}
             style={n.id === "admin" && view === n.id ? { color: "#7030A0" } : {}}
